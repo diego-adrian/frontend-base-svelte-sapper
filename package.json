@@ -1,19 +1,13 @@
 {
-  "name": "smelte-template",
-  "description": "Sapper template for Smelte",
+  "name": "frontend-base-svelte",
+  "description": "Frontend base con svelte y sapper integrado con smelte",
   "version": "0.0.3",
   "scripts": {
-    "dev": "sapper dev",
+    "start": "sapper dev",
     "build": "sapper build --legacy",
     "export": "sapper export --legacy",
-    "start": "node __sapper__/build",
-    "serve": "serve __sapper__/export",
-    "cy:run": "cypress run",
-    "lint": "prettier --write --plugin-search-dir=. ./src/**/*",
-    "cy:open": "cypress open",
-    "test": "run-p --race dev cy:run",
-    "now": "yarn build && now",
-    "now-build": "sapper build --export"
+    "start:sapper": "node __sapper__/build",
+    "lint": "prettier --write --plugin-search-dir=. ./src/**/*"
   },
   "pre-commit": [
     "lint"
@@ -32,7 +26,6 @@
     "@babel/preset-env": "^7.0.0",
     "@babel/runtime": "^7.0.0",
     "@fullhuman/postcss-purgecss": "^1.2.0",
-    "@now/node": "^0.9.0",
     "autoprefixer": "^9.5.1",
     "cssnano": "^4.1.10",
     "eslint": "^6.0.1",
