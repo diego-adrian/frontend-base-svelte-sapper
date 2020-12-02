@@ -4,15 +4,23 @@ import commonjs from "rollup-plugin-commonjs";
 import svelte from "rollup-plugin-svelte";
 import babel from "rollup-plugin-babel";
 import { terser } from "rollup-plugin-terser";
-import { string } from "rollup-plugin-string";
 import json from "rollup-plugin-json";
 import config from "sapper/config/rollup.js";
+import pkg from './package.json';
 import includePaths from "rollup-plugin-includepaths";
 const mode = process.env.NODE_ENV;
 const dev = mode === "development";
 const legacy = !!process.env.SAPPER_LEGACY_BUILD;
 
 const smelte = require("smelte/rollup-plugin-smelte");
+
+const onwarn = (warning, onwarn) =>
+	(warning.code === 'MISSING_EXPORT' && /'preload'/.test(warning.message)) ||
+	(warning.code === 'CIRCULAR_DEPENDENCY' && /[/\\]@sapper[/\\]/.test(warning.message)) ||
+	(warning.message === 'Unused CSS selector') ||
+	(warning.message === 'A11y: A form label must be associated with a control.') ||
+	(warning.message === 'Use of eval is strongly discouraged, as it poses security risks and may cause issues with minification') ||
+	onwarn(warning);
 
 export default {
   client: {
@@ -23,58 +31,41 @@ export default {
         "process.browser": true,
         "process.env.NODE_ENV": JSON.stringify(mode)
       }),
-      string({
-        include: "**/*.txt"
-      }),
       svelte({
         dev,
         hydratable: true,
         emitCss: true,
       }),
       !dev && smelte,
-      resolve(),
+      resolve({
+        browser: true
+      }),
       commonjs(),
       includePaths({ paths: ["./src", "./", "./node_modules/smelte/src/"] }),
 
-      !legacy &&
-        babel({
-          extensions: [".js", ".mjs", ".html", ".svelte"],
-          exclude: ["node_modules/@babel/**"],
-          plugins: [
-            "@babel/plugin-syntax-dynamic-import",
-            "@babel/plugin-proposal-object-rest-spread"
-          ]
-        }),
+      legacy && babel({
+				extensions: ['.js', '.mjs', '.html', '.svelte'],
+				babelHelpers: 'runtime',
+				exclude: ['node_modules/@babel/**'],
+				presets: [
+					['@babel/preset-env', {
+						targets: '> 0.25%, not dead'
+					}]
+				],
+				plugins: [
+					'@babel/plugin-syntax-dynamic-import',
+					['@babel/plugin-transform-runtime', {
+						useESModules: true
+					}]
+				]
+			}),
 
-      legacy &&
-        babel({
-          extensions: [".js", ".mjs", ".html", ".svelte"],
-          runtimeHelpers: true,
-          exclude: ["node_modules/@babel/**"],
-          presets: [
-            [
-              "@babel/preset-env",
-              {
-                targets: "> 0.25%, ie >= 11, not dead"
-              }
-            ]
-          ],
-          plugins: [
-            "@babel/plugin-syntax-dynamic-import",
-            [
-              "@babel/plugin-transform-runtime",
-              {
-                useESModules: true
-              }
-            ]
-          ]
-        }),
-
-      !dev &&
-        terser({
-          module: true
-        })
-    ]
+      !dev && terser({
+        module: true
+      })
+    ],
+    preserveEntrySignatures: false,
+    onwarn
   },
 
   server: {
@@ -91,17 +82,13 @@ export default {
         dev,
       }),
       smelte(),
-      string({
-        include: "**/*.txt"
-      }),
       resolve(),
       includePaths({ paths: ["./src", "./", "./node_modules/smelte/src/"] }),
       commonjs(),
     ],
-    external: [].concat(
-      require("module").builtinModules ||
-        Object.keys(process.binding("natives"))
-    )
+    external: Object.keys(pkg.dependencies).concat(require('module').builtinModules),
+    preserveEntrySignatures: 'strict',
+		onwarn
   },
 
   serviceworker: {
@@ -115,6 +102,8 @@ export default {
       }),
       commonjs(),
       !dev && terser()
-    ]
+    ],
+    preserveEntrySignatures: false,
+		onwarn
   }
 };
